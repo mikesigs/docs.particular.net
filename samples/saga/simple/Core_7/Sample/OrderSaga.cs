@@ -2,13 +2,15 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Logging;
+using Sample;
 
 #region thesaga
 public class OrderSaga :
     Saga<OrderSagaData>,
     IAmStartedByMessages<StartOrder>,
     IHandleMessages<CompleteOrder>,
-    IHandleTimeouts<CancelOrder>
+    IHandleTimeouts<CancelOrder>,
+    IHandleMessages<OrderShipped>
 {
     static ILog log = LogManager.GetLogger<OrderSaga>();
 
@@ -24,24 +26,16 @@ public class OrderSaga :
     {
         // Correlation property Data.OrderId is automatically assigned with the value from message.OrderId;
         log.Info($"StartOrder received with OrderId {message.OrderId}");
-
-        log.Info($@"Sending a CompleteOrder that will be delayed by 10 seconds
-Stop the endpoint now to see the saga data in:
-{LearningLocationHelper.GetSagaLocation<OrderSaga>(Data.Id)}");
-        var completeOrder = new CompleteOrder
+        var shipOrder = new ShipOrder
         {
-            OrderId = Data.OrderId
+            OrderId = message.OrderId
         };
-        var sendOptions = new SendOptions();
-        sendOptions.DelayDeliveryWith(TimeSpan.FromSeconds(10));
-        sendOptions.RouteToThisEndpoint();
-        await context.Send(completeOrder, sendOptions)
-            .ConfigureAwait(false);
+
+        await context.SendLocal(shipOrder);
+        log.Info(@"Sending a ShipOrder message.");
 
         var timeout = DateTime.UtcNow.AddSeconds(30);
-        log.Info($@"Requesting a CancelOrder that will be executed in 30 seconds.
-Stop the endpoint now to see the timeout data in the delayed directory
-{LearningLocationHelper.TransportDelayedDirectory(timeout)}");
+        log.Info(@"Requesting a CancelOrder that will be executed in 30 seconds. Stop the endpoint now to see the timeout data");
         await RequestTimeout<CancelOrder>(context, timeout)
             .ConfigureAwait(false);
     }
@@ -58,6 +52,20 @@ Stop the endpoint now to see the timeout data in the delayed directory
         log.Info($"CompleteOrder not received soon enough OrderId {Data.OrderId}. Calling MarkAsComplete");
         MarkAsComplete();
         return Task.CompletedTask;
+    }
+
+    public async Task Handle(OrderShipped message, IMessageHandlerContext context)
+    {
+        log.Info($"OrderShipped was received. Completing OrderId {Data.OrderId}");
+        var completeOrder = new CompleteOrder
+        {
+            OrderId = Data.OrderId
+        };
+        var sendOptions = new SendOptions();
+        sendOptions.DelayDeliveryWith(TimeSpan.FromSeconds(60));
+        sendOptions.RouteToThisEndpoint();
+        await context.Send(completeOrder, sendOptions)
+            .ConfigureAwait(false);
     }
 }
 #endregion

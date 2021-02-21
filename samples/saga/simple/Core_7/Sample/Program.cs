@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using NServiceBus;
+using System.Data.SqlClient;
 
 class Program
 {
@@ -9,20 +10,27 @@ class Program
         Console.Title = "Samples.SimpleSaga";
         var endpointConfiguration = new EndpointConfiguration("Samples.SimpleSaga");
 
+        endpointConfiguration.EnableInstallers();
         #region config
 
-        endpointConfiguration.UsePersistence<LearningPersistence>();
-        endpointConfiguration.UseTransport<LearningTransport>();
+        var connection = "Data Source=192.168.0.114;User=sa;Password=GQI1qNeq0oEHlL";
+        endpointConfiguration.UseTransport<RabbitMQTransport>()
+            .ConnectionString("host=192.168.0.114;username=rabbitmq;password=rabbitmq")
+            .UseConventionalRoutingTopology();
+
+        var persistence = endpointConfiguration.UsePersistence<SqlPersistence>();
+
+        persistence.SqlDialect<SqlDialect.MsSqlServer>();
+        persistence.ConnectionBuilder(
+            connectionBuilder: () =>
+            {
+                return new SqlConnection(connection);
+            });
 
         #endregion
 
         var endpointInstance = await Endpoint.Start(endpointConfiguration)
             .ConfigureAwait(false);
-
-        Console.WriteLine();
-        Console.WriteLine("Storage locations:");
-        Console.WriteLine($"Learning Persister: {LearningLocationHelper.SagaDirectory}");
-        Console.WriteLine($"Learning Transport: {LearningLocationHelper.TransportDirectory}");
 
         Console.WriteLine();
         Console.WriteLine("Press 'Enter' to send a StartOrder message");

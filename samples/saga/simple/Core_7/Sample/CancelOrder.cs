@@ -1,6 +1,6 @@
 ﻿using NServiceBus;
 
-public class CancelOrder :
+public record CancelOrder :
     IMessage
 {
 }
