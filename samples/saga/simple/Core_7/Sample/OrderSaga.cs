@@ -2,11 +2,12 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Logging;
+using NServiceBus.Persistence.Sql;
 using Sample;
 
 #region thesaga
 public class OrderSaga :
-    Saga<OrderSagaData>,
+    SqlSaga<OrderSagaData>,
     IAmStartedByMessages<StartOrder>,
     IHandleMessages<CompleteOrder>,
     IHandleTimeouts<CancelOrder>,
@@ -14,16 +15,25 @@ public class OrderSaga :
 {
     static ILog log = LogManager.GetLogger<OrderSaga>();
 
-    protected override void ConfigureHowToFindSaga(SagaPropertyMapper<OrderSagaData> mapper)
+
+    protected override void ConfigureMapping(IMessagePropertyMapper mapper)
     {
-        mapper.ConfigureMapping<StartOrder>(message => message.OrderId)
-                .ToSaga(sagaData => sagaData.OrderId);
-        mapper.ConfigureMapping<CompleteOrder>(message => message.OrderId)
-                .ToSaga(sagaData => sagaData.OrderId);
+        mapper.ConfigureMapping<StartOrder>(message => message.OrderId);
+        mapper.ConfigureMapping<CompleteOrder>(message => message.OrderId);
     }
+
+    protected override string CorrelationPropertyName => nameof(OrderSagaData.OrderId);
 
     public async Task Handle(StartOrder message, IMessageHandlerContext context)
     {
+        var orderData = new OrderData
+        {
+            OrderShipped = false,
+            OrderStarted = true
+        };
+
+        Data = Data with { Order = orderData };
+
         // Correlation property Data.OrderId is automatically assigned with the value from message.OrderId;
         log.Info($"StartOrder received with OrderId {message.OrderId}");
         var shipOrder = new ShipOrder
@@ -56,6 +66,10 @@ public class OrderSaga :
 
     public async Task Handle(OrderShipped message, IMessageHandlerContext context)
     {
+        var orderData = Data.Order with {OrderShipped = true};
+        var data = Data with {Order = orderData};
+        Data = data;
+
         log.Info($"OrderShipped was received. Completing OrderId {Data.OrderId}");
         var completeOrder = new CompleteOrder
         {
