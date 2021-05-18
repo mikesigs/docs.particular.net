@@ -1,59 +1,52 @@
 ---
-title: Architectural Principles
+title: Architectural principles
 summary: NServiceBus helps write code that is robust in production environments, preventing data loss under failure conditions
-reviewed: 2021-04-07
+reviewed: 2021-05-18
 redirects:
  - nservicebus/architectural-principles
 ---
 
-Messaging can be used to ensure autonomy and loose coupling in systems, both at design time and at run time. However, in order to benefit from those qualities applications must be carefully designed and good practices followed.
+Messaging can be used to ensure autonomy and loose coupling in systems, both at design time and at run time. However, in order to benefit from those qualities, applications must be carefully designed and good practices followed.
 
-Service-oriented architecture (SOA) and event-driven architecture provide the basis for identifying where to use messaging frameworks, such as NServiceBus. Strategic Domain-Driven Design helps bridge the gap between business and IT. It's an essential strategy for identifying service boundaries and finding meaningful business events.
-
+Service-oriented architecture (SOA) and event-driven architecture provide the basis for identifying where to use messaging frameworks, such as NServiceBus. Strategic domain-driven design helps bridge the gap between business and IT and is an essential strategy for identifying service boundaries and finding meaningful business events.
 
 ## How NServiceBus aligns with SOA
 
 <iframe allowfullscreen frameborder="0" height="300" mozallowfullscreen src="https://player.vimeo.com/video/113515335" webkitallowfullscreen width="400"></iframe>
 
-In this presentation Udi Dahan explains the process of finding the right service boundaries. The presentation starts with introduction to SOA, explains challenges with traditional layered architectures and covers an approach that cuts across all application layers, outlining the inherent lines of loose and tight coupling. Finally, Udi shows how these vertical services collaborate together using events in order to bring about flexible and high performance business processes.
-
+In this presentation Udi Dahan explains the process of finding the right service boundaries. The presentation starts with introduction to SOA, explains challenges with traditional layered architectures and covers an approach that cuts across all application layers, outlining the inherent lines of loose and tight coupling. Finally, Udi shows how these vertical services collaborate using events, enabling flexible and high performance business processes.
 
 ## Drilling down into details
 
-One of the problems in many systems is that they are fragile. One part of the system slows down, affecting other parts of the system, ultimately crashing the entire system. 
+A common problem in many systems is that they are fragile. One part of the system slows down, affecting other parts of the system, ultimately crashing the entire system.
 
-One of the primary design goals of NServiceBus is to eliminate that flaw by guiding developers to write code that is robust in production environments. That robustness prevents data loss under failure conditions.
+A primary design goal of NServiceBus is to eliminate that flaw by guiding developers to write code that is robust in production environments. That robustness prevents data loss under failure conditions.
 
-To make effective use of NServiceBus, it is necessary to understand the distributed systems architecture it is designed to support. Those basic principles are explained briefly in this article. For more in-depth coverage, see the [ADSD course](https://particular.net/adsd).  
+To make effective use of NServiceBus, it is necessary to understand the distributed systems architecture it is designed to support. Those basic principles are explained briefly in this article. For more in-depth coverage, see the [Advanced Distributed Systems Design course](https://particular.net/adsd).
 
 The basic communication pattern that enables robustness is one-way messaging, also known as "fire and forget". Since the amount of time it can take to communicate with another machine across the network is unknown and unbounded, asynchronous communication in NServiceBus is based on a store-and-forward model.
-
 
 ## Messaging versus RPC
 
 NServiceBus enforces queued messaging, which has profound architectural implications. The principles and patterns underlying queued messaging are decades old and battle-tested through countless technological shifts.
 
-It's very simple to build an application and get it working using traditional RPC techniques that WCF supports. However, scalability and fault-tolerance are inherently hindered when using blocking calls. Scaling up and throwing more hardware at the problem has little effect.
+It's very simple to build an application and get it working using traditional remote procedure call (RPC) techniques that, for example, WCF supports. However, scalability and fault-tolerance are inherently hindered when using blocking calls. Scaling up and throwing more hardware at the problem has little effect.
 
-NServiceBus avoids these problems from the beginning. There's no such thing as a blocking call with one-way messaging. Common, transient errors can be resolved automatically with retries, and it's easy to recover from failures that require some manual intervention. Above all, even when a part of the system fails, no data gets lost. 
+NServiceBus avoids these problems from the beginning. There's no such thing as a blocking call with one-way messaging. Common, transient errors can be resolved automatically with retries, and it's easy to recover from failures that require some manual intervention. Above all, even when a part of the system fails, no data gets lost.
 
-In order to learn more about the relationship between messaging and reliable, scalable, highly-available systems, watch the webinar about [handling failures with NServiceBus](https://particular.net/webinars/handling-failures-with-nservicebus).
-
-See also other webinars and presentations on the [Videos and Presentations](https://particular.net/videos) page.
-
+To learn more about the relationship between messaging and reliable, scalable, and highly-available systems, watch the webinar about [handling failures with NServiceBus](https://particular.net/webinars/handling-failures-with-nservicebus) and other [webinar and presentations](https://particular.net/videos).
 
 ### Store-and-forward messaging
 
 ![Store and Forward Messaging](store-and-forward.png)
 
-In this model, when the client processes calls an API to send a message to the server process, the API returns control to the calling thread before the message is sent. At that point the transfer of the message across the network becomes the responsibility of the messaging technology. There may be communications interference, e.g. the server machine may be down, or a firewall may slow the transfer. Also, even though the message may have reached the target machine, the target process may currently be down.
+In this model, when the client process calls an API to send a message to the server process, the API returns control to the calling thread before the message is sent. At that point the transfer of the message across the network becomes the responsibility of the messaging technology. There may be communications interference. For example, the server machine may be down, or a firewall may slow the transfer. Also, even though the message may have reached the target machine, the target process may currently be down.
 
 The client process is oblivious to those problems; as soon as the message is sent, messaging infrastructure takes over. As a result, critical resources like threads are not held waiting for the message processing to complete. This prevents the client process from losing stability while waiting for a response from another machine or process.
 
-
 ### Request/response and one-way messaging
 
-The common pattern of request/response, which is more accurately described as synchronous Remote Procedure Call, is handled differently when using one-way messaging. From a network perspective, request/response is just two one-way interactions, as illustrated in the diagram:
+The common pattern of request/response, which is more accurately described as synchronous RPC, is handled differently when using one-way messaging. From a network perspective, request/response is just two one-way interactions, as illustrated in the diagram:
 
 ![Full duplex Request-Response messaging](full-duplex-messaging.png)
 
